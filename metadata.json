@@ -1,0 +1,5 @@
+{
+  "name": "ChromaGenius",
+  "description": "A high-end AI-powered color palette generator that creates harmonious website themes from seed colors using Gemini.",
+  "requestFramePermissions": []
+}
