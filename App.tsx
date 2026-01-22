@@ -202,7 +202,7 @@ const App: React.FC = () => {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
                     <div className="absolute bottom-6 left-6 right-6">
-                      <span className="inline-block px-3 py-1 mb-2 text-xs font-bold text-black bg-white rounded-full">AI Generated Hero</span>
+                      <span className="inline-block px-3 py-1 mb-2 text-xs font-bold text-black bg-white rounded-full">AI Generated Hero - Google AI Studio Changes</span>
                       <h3 className="text-2xl font-bold text-white">Your Brand Identity</h3>
                     </div>
                   </div>
