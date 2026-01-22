@@ -58,3 +58,51 @@ export const generatePalette = async (seeds: string[]): Promise<{ colors: ColorI
     throw new Error("Invalid response format from AI");
   }
 };
+
+export const generateHeroImage = async (colors: ColorInfo[], concept: string): Promise<string> => {
+  const colorDesc = colors.map(c => `${c.name} (${c.hex})`).join(', ');
+  
+  const prompt = `Create a high-quality, abstract, modern website hero background image.
+  Concept: ${concept}
+  Colors to emphasize: ${colorDesc}.
+  Style: Sleek, digital, gradient-heavy, geometric or fluid shapes. Minimalist interface background.
+  No text in the image.`;
+
+  // Azure Foundry Endpoint construction
+  const baseUrl = "https://sales-tools-sponsored-resource.services.ai.azure.com/api/projects/sales-tools-sponsored";
+  const endpoint = `${baseUrl}/images/generations`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'api-key': process.env.API_KEY || '',
+      },
+      body: JSON.stringify({
+        model: "gpt-image",
+        prompt: prompt,
+        n: 1,
+        size: "1024x1024",
+        response_format: "b64_json"
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Azure Service Error:", errorText);
+      throw new Error(`Image generation failed: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.data?.[0]?.b64_json) {
+      return `data:image/png;base64,${data.data[0].b64_json}`;
+    }
+
+    throw new Error("No image data received from Azure service");
+  } catch (error) {
+    console.error("Hero image generation error:", error);
+    throw error;
+  }
+};

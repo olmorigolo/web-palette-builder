@@ -11,4 +11,5 @@ export interface Palette {
   colors: ColorInfo[];
   concept: string;
   timestamp: number;
+  heroImage?: string;
 }

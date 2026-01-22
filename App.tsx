@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Palette, ColorInfo } from './types';
-import { generatePalette } from './services/geminiService';
+import { generatePalette, generateHeroImage } from './services/geminiService';
 import GeometricShowcase from './components/GeometricShowcase';
 import ColorCard from './components/ColorCard';
 
@@ -9,21 +9,38 @@ const App: React.FC = () => {
   const [seeds, setSeeds] = useState<string[]>(['#3b82f6', '#10b981']);
   const [palette, setPalette] = useState<Palette | null>(null);
   const [loading, setLoading] = useState(false);
+  const [generatingImage, setGeneratingImage] = useState(false);
   const [showCss, setShowCss] = useState(false);
 
   const handleGenerate = async () => {
     setLoading(true);
+    setPalette(null);
     try {
+      // 1. Generate Palette first (fast)
       const result = await generatePalette(seeds);
-      setPalette({
+      const newPalette: Palette = {
         id: Math.random().toString(36).substr(2, 9),
         colors: result.colors,
         concept: result.concept,
         timestamp: Date.now()
-      });
+      };
+      setPalette(newPalette);
+      setLoading(false);
+
+      // 2. Generate Hero Image (slower)
+      setGeneratingImage(true);
+      try {
+        const imageUrl = await generateHeroImage(result.colors, result.concept);
+        setPalette(prev => prev ? { ...prev, heroImage: imageUrl } : null);
+      } catch (imgError) {
+        console.error("Image generation failed", imgError);
+        // Don't fail the whole process if image fails
+      } finally {
+        setGeneratingImage(false);
+      }
+
     } catch (error) {
       alert("Failed to generate palette. Please check your API key.");
-    } finally {
       setLoading(false);
     }
   };
@@ -44,6 +61,9 @@ const App: React.FC = () => {
     css += `body {\n  background-color: var(--color-background);\n  color: var(--color-text);\n}\n\n`;
     css += `.btn-primary {\n  background-color: var(--color-primary);\n  color: var(--color-background);\n}\n\n`;
     css += `.accent {\n  color: var(--color-accent-1);\n}`;
+    if (palette.heroImage) {
+      css += `\n\n/* Hero Image Background */\n.hero {\n  background-image: url('${palette.heroImage}');\n  background-size: cover;\n  background-position: center;\n}`;
+    }
     return css;
   };
 
@@ -105,9 +125,9 @@ const App: React.FC = () => {
 
             <button
               onClick={handleGenerate}
-              disabled={loading}
+              disabled={loading || generatingImage}
               className={`w-full py-4 rounded-2xl font-bold text-lg transition-all flex items-center justify-center gap-3 shadow-xl ${
-                loading 
+                loading || generatingImage
                   ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed' 
                   : 'bg-white text-black hover:scale-[1.02] hover:shadow-white/10 active:scale-[0.98]'
               }`}
@@ -118,7 +138,15 @@ const App: React.FC = () => {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Curating...
+                  Thinking...
+                </>
+              ) : generatingImage ? (
+                <>
+                  <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Painting...
                 </>
               ) : (
                 <>
@@ -155,15 +183,40 @@ const App: React.FC = () => {
             </div>
           ) : palette && (
             <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-              {/* Geometric Showcase */}
-              <div>
-                <div className="flex items-center justify-between mb-6">
+              {/* Header Info */}
+              <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-3xl font-bold tracking-tight">Design Preview</h2>
-                    <p className="text-zinc-500 text-sm">{palette.concept}</p>
+                    <p className="text-zinc-500 text-sm mt-1">{palette.concept}</p>
                   </div>
-                </div>
-                <GeometricShowcase colors={palette.colors} />
+              </div>
+
+              {/* Showcase Area: Hero Image or Geometric */}
+              <div className="space-y-6">
+                {palette.heroImage ? (
+                  <div className="relative group rounded-3xl overflow-hidden border border-white/10 shadow-2xl aspect-video bg-black">
+                    <img 
+                      src={palette.heroImage} 
+                      alt="AI Generated Hero" 
+                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
+                    <div className="absolute bottom-6 left-6 right-6">
+                      <span className="inline-block px-3 py-1 mb-2 text-xs font-bold text-black bg-white rounded-full">AI Generated Hero</span>
+                      <h3 className="text-2xl font-bold text-white">Your Brand Identity</h3>
+                    </div>
+                  </div>
+                ) : generatingImage ? (
+                   <div className="w-full aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl bg-zinc-900 flex flex-col items-center justify-center gap-4">
+                      <div className="relative w-16 h-16">
+                        <div className="absolute inset-0 border-4 border-white/20 rounded-full"></div>
+                        <div className="absolute inset-0 border-4 border-white rounded-full border-t-transparent animate-spin"></div>
+                      </div>
+                      <p className="text-zinc-400 font-medium animate-pulse">Designing Hero Image...</p>
+                   </div>
+                ) : (
+                  <GeometricShowcase colors={palette.colors} />
+                )}
               </div>
 
               {/* Color Grid */}
@@ -178,7 +231,7 @@ const App: React.FC = () => {
             </div>
           )}
 
-          {loading && (
+          {loading && !palette && (
             <div className="space-y-8 animate-pulse">
               <div className="w-full aspect-video bg-white/5 rounded-3xl"></div>
               <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
